@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sistema de Stock</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <style id="app-style">
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f8f9fa;
+        min-height: 100vh;
+      }
+      
+      .auth-container {
+        max-width: 450px;
+        margin: 0 auto;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        background-color: #fff;
+      }
+      
+      .welcome-logo {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 2rem;
+        display: block;
+      }
+      
+      .btn-primary {
+        background-color: #4361ee;
+        border-color: #4361ee;
+      }
+      
+      .btn-primary:hover {
+        background-color: #3a56d4;
+        border-color: #3a56d4;
+      }
+      
+      .dashboard-header {
+        background-color: #fff;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        padding: 1rem 0;
+      }
+      
+      .user-welcome {
+        font-size: 0.9rem;
+        color: #6c757d;
+      }
+      
+      .table-actions {
+        white-space: nowrap;
+      }
+      
+      .loading-spinner {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+      }
+      
+      .modal-header {
+        background-color: #f8f9fa;
+      }
+      
+      .category-badge {
+        font-size: 0.8rem;
+        padding: 0.35em 0.65em;
+      }
+      
+      .filter-row {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+      }
+      
+      #stockTable_wrapper .row:first-child {
+        margin-bottom: 1rem;
+      }
+      
+      .dataTables_filter {
+        display: none;
+      }
+      
+      .card-dashboard {
+        border-radius: 10px;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: transform 0.2s;
+      }
+      
+      .card-dashboard:hover {
+        transform: translateY(-5px);
+      }
+      
+      @media (max-width: 768px) {
+        .table-responsive {
+          font-size: 0.9rem;
+        }
+        
+        .auth-container {
+          margin: 1rem;
+          max-width: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" id="loadingSpinner">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Cargando...</span>
+      </div>
+    </div>
+    
+    <!-- Welcome Screen -->
+    <div class="container py-5" id="welcomeScreen">
+      <div class="auth-container text-center">
+        <img src="https://cdn.pixabay.com/photo/2016/10/10/14/46/icon-1728552_960_720.jpg" alt="Logo" class="welcome-logo">
+        <h1 class="h3 mb-4">Sistema de Stock</h1>
+        <p class="text-muted mb-4">Gestiona tu inventario de manera fácil y eficiente</p>
+        <div class="d-grid gap-3">
+          <button id="loginBtn" class="btn btn-primary btn-lg">
+            <i class="fas fa-sign-in-alt me-2"></i> Iniciar Sesión
+          </button>
+          <button id="registerBtn" class="btn btn-outline-secondary btn-lg">
+            <i class="fas fa-user-plus me-2"></i> Registrarse
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Login Form -->
+    <div class="container py-5 d-none" id="loginScreen">
+      <div class="auth-container">
+        <h2 class="text-center mb-4">Iniciar Sesión</h2>
+        <form id="loginForm">
+          <div class="mb-3">
+            <label for="loginEmail" class="form-label">Correo Electrónico</label>
+            <input type="email" class="form-control" id="loginEmail" required>
+          </div>
+          <div class="mb-3">
+            <label for="loginPassword" class="form-label">Contraseña</label>
+            <input type="password" class="form-control" id="loginPassword" required>
+          </div>
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
+            <button type="button" class="btn btn-link" id="backToWelcomeFromLogin">Volver</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <!-- Register Form -->
+    <div class="container py-5 d-none" id="registerScreen">
+      <div class="auth-container">
+        <h2 class="text-center mb-4">Registrarse</h2>
+        <form id="registerForm">
+          <div class="mb-3">
+            <label for="registerName" class="form-label">Nombre Completo</label>
+            <input type="text" class="form-control" id="registerName" required>
+          </div>
+          <div class="mb-3">
+            <label for="registerEmail" class="form-label">Correo Electrónico</label>
+            <input type="email" class="form-control" id="registerEmail" required>
+          </div>
+          <div class="mb-3">
+            <label for="registerPassword" class="form-label">Contraseña</label>
+            <input type="password" class="form-control" id="registerPassword" required>
+          </div>
+          <div class="mb-4">
+            <label class="form-label">Rol</label>
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="role" id="roleAdmin" value="admin" required>
+                <label class="form-check-label" for="roleAdmin">
+                  Administrador
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="role" id="roleEmployee" value="employee" required>
+                <label class="form-check-label" for="roleEmployee">
+                  Empleado
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary">Registrarse</button>
+            <button type="button" class="btn btn-link" id="backToWelcomeFromRegister">Volver</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Dashboard -->
+    <div class="d-none" id="dashboardScreen">
+      <!-- Dashboard Header -->
+      <header class="dashboard-header mb-4">
+        <div class="container d-flex justify-content-between align-items-center">
+          <div>
+            <h1 class="h3 mb-0">Sistema de Stock</h1>
+            <p class="user-welcome mb-0">Bienvenido, <span id="userNameDisplay">Usuario</span></p>
+          </div>
+          <div id="connStatus" title="WebSocket status">
+            <i class="fas fa-circle text-danger"></i>
+          </div>
+          <button id="logoutBtn" class="btn btn-outline-danger">
+            <i class="fas fa-sign-out-alt me-2"></i> Cerrar Sesión
+          </button>
+        </div>
+      </header>
+      
+      <!-- Dashboard Content -->
+      <div class="container">
+        <!-- Stats Cards -->
+        <div class="row mb-4">
+<div class="col-md-4 mb-3 mb-md-0">
+            <div class="card card-dashboard bg-primary text-white">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <div class="col-3">
+                    <i class="fas fa-box fa-3x"></i>
+                  </div>
+                  <div class="col-9 text-end">
+                    <h5 class="card-title mb-1">Total Productos</h5>
+                    <h3 class="mb-0" id="totalProductsCount">0</h3>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4 mb-3 mb-md-0">
+            <div class="card card-dashboard bg-success text-white">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <div class="col-3">
+                    <i class="fas fa-tags fa-3x"></i>
+                  </div>
+                  <div class="col-9 text-end">
+                    <h5 class="card-title mb-1">Categorías</h5>
+                    <h3 class="mb-0" id="categoriesCount">0</h3>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card card-dashboard bg-warning text-white">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <div class="col-3">
+                    <i class="fas fa-exclamation-triangle fa-3x"></i>
+                  </div>
+                  <div class="col-9 text-end">
+                    <h5 class="card-title mb-1">Stock Bajo</h5>
+                    <h3 class="mb-0" id="lowStockCount">0</h3>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Filter Row -->
+        <div class="filter-row">
+          <div class="row">
+            <div class="col-md-6 mb-3 mb-md-0">
+              <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" class="form-control" id="searchInput" placeholder="Buscar productos...">
+              </div>
+            </div>
+            <div class="col-md-4 mb-3 mb-md-0">
+              <select class="form-select" id="categoryFilter">
+                <option value="">Todas las categorías</option>
+                <option value="Electrónica">Electrónica</option>
+                <option value="Alimentación">Alimentación</option>
+                <option value="Ropa">Ropa</option>
+                <option value="Hogar">Hogar</option>
+              </select>
+            </div>
+            <div class="col-md-2 text-md-end">
+              <button id="addProductBtn" class="btn btn-primary w-100">
+                <i class="fas fa-plus me-2"></i> Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Products Table -->
+        <div class="card">
+          <div class="card-body">
+            <div class="table-responsive">
+              <table id="stockTable" class="table table-striped table-hover">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Categoría</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Data will be loaded dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Add/Edit Product Modal -->
+    <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="productModalTitle">Agregar Producto</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="productForm">
+              <input type="hidden" id="productId">
+              <div class="mb-3">
+                <label for="productName" class="form-label">Nombre del Producto</label>
+                <input type="text" class="form-control" id="productName" required>
+              </div>
+              <div class="mb-3">
+                <label for="productCategory" class="form-label">Categoría</label>
+                <select class="form-select" id="productCategory" required>
+                  <option value="">Seleccionar categoría</option>
+                  <option value="Electrónica">Electrónica</option>
+                  <option value="Alimentación">Alimentación</option>
+                  <option value="Ropa">Ropa</option>
+                  <option value="Hogar">Hogar</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="productQuantity" class="form-label">Cantidad</label>
+                <input type="number" class="form-control" id="productQuantity" min="0" required>
+              </div>
+              <div class="mb-3">
+                <label for="productPrice" class="form-label">Precio</label>
+                <div class="input-group">
+                  <span class="input-group-text">$</span>
+                  <input type="number" class="form-control" id="productPrice" min="0" step="0.01" required>
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="saveProductBtn">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Confirmar Eliminación</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>¿Está seguro de que desea eliminar este producto?</p>
+            <p class="fw-bold" id="deleteProductName"></p>
+            <input type="hidden" id="deleteProductId">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Eliminar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Toast Container -->
+    <div aria-live="polite" class="position-fixed top-0 end-0 p-3" style="z-index: 1100">
+      <div id="toastContainer" class="toast-container"></div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script id="app-script">
+      // Global variables
+      let currentUser = null;
+      let dataTable = null;
+      let products = [];
+      let ws;
+      const RECONNECT_INTERVAL = 3000;
+      
+      // DOM Elements
+      const screens = {
+        welcome: document.getElementById('welcomeScreen'),
+        login: document.getElementById('loginScreen'),
+        register: document.getElementById('registerScreen'),
+        dashboard: document.getElementById('dashboardScreen')
+      };
+      
+      // Modals
+      const productModal = new bootstrap.Modal(document.getElementById('productModal'));
+      const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+      
+      // Loading spinner
+      const showSpinner = () => {
+        document.getElementById('loadingSpinner').style.display = 'flex';
+      };
+      
+      const hideSpinner = () => {
+        setTimeout(() => {
+          document.getElementById('loadingSpinner').style.display = 'none';
+        }, 500);
+      };
+      
+      // Navigation Functions
+      function showScreen(screenId) {
+        Object.keys(screens).forEach(key => {
+          screens[key].classList.add('d-none');
+        });
+        screens[screenId].classList.remove('d-none');
+      }
+      
+      // Event Listeners for Navigation
+      document.getElementById('loginBtn').addEventListener('click', () => {
+        // 1) SOLO muestra el formulario de inicio de sesión
+        showScreen('login');
+        // no ejecuta ninguna otra acción
+      });
+      document.getElementById('registerBtn').addEventListener('click', () => showScreen('register'));
+      document.getElementById('backToWelcomeFromLogin').addEventListener('click', () => showScreen('welcome'));
+      document.getElementById('backToWelcomeFromRegister').addEventListener('click', () => showScreen('welcome'));
+document.getElementById('logoutBtn').addEventListener('click', logout);
+      
+      // User Management
+      function initializeApp() {
+        // Check if a user is logged in
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+          currentUser = JSON.parse(storedUser);
+          document.getElementById('userNameDisplay').textContent = currentUser.name;
+          
+          // Show/hide add button based on role
+          const isAdmin = currentUser.role === 'admin';
+          document.getElementById('addProductBtn').style.display = isAdmin ? 'block' : 'none';
+          
+          // Initialize dashboard
+          initializeDashboard();
+        } else {
+          showScreen('welcome');
+        }
+      }
+      
+      // Register Form Submission
+      document.getElementById('registerForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        showSpinner();
+        
+        const name = document.getElementById('registerName').value;
+        const email = document.getElementById('registerEmail').value;
+        const password = document.getElementById('registerPassword').value;
+        const role = document.querySelector('input[name="role"]:checked').value;
+        
+        // Create user object
+        const user = { name, email, password, role };
+        // Get existing users or initialize empty array
+        let users = JSON.parse(localStorage.getItem('users') || '[]');
+        
+        // Check if email already exists
+        if (users.some(u => u.email === email)) {
+          alert('Este correo electrónico ya está registrado.');
+          hideSpinner();
+          return;
+        }
+        
+        // Add new user
+        users.push(user);
+        
+        // Save to localStorage
+        localStorage.setItem('users', JSON.stringify(users));
+        
+        // Auto login
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        currentUser = user;
+        
+        // Update UI
+        document.getElementById('userNameDisplay').textContent = name;
+        document.getElementById('registerForm').reset();
+        
+        // Show/hide add button based on role
+        const isAdmin = role === 'admin';
+        document.getElementById('addProductBtn').style.display = isAdmin ? 'block' : 'none';
+        
+        // Initialize dashboard and show it
+        initializeDashboard();
+        hideSpinner();
+        showScreen('dashboard');
+      });
+      
+      // Login Form Submission
+      document.getElementById('loginForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        showSpinner();
+        
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        
+        // Get users from localStorage
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        
+        // Find user
+        const user = users.find(u => u.email === email && u.password === password);
+        
+        if (user) {
+          // Store current user
+          localStorage.setItem('currentUser', JSON.stringify(user));
+          currentUser = user;
+          
+          // Update UI
+          document.getElementById('userNameDisplay').textContent = user.name;
+          document.getElementById('loginForm').reset();
+          
+          // 2) Al autenticar con éxito, redirigimos AL INSTANTE al Dashboard
+const isAdmin = user.role === 'admin';
+          document.getElementById('addProductBtn').style.display = isAdmin ? 'block' : 'none';
+          
+          initializeDashboard();
+          hideSpinner();
+          showScreen('dashboard');
+        } else {
+          alert('Credenciales incorrectas. Por favor, intenta nuevamente.');
+          hideSpinner();
+        }
+      });
+      
+      // Logout Function
+      function logout() {
+        showSpinner();
+        
+        // Clear current user
+        localStorage.removeItem('currentUser');
+        currentUser = null;
+        
+        // Reset forms
+        document.getElementById('loginForm').reset();
+        document.getElementById('registerForm').reset();
+        
+        // Destroy DataTable instance if exists
+        if (dataTable) {
+          dataTable.destroy();
+          dataTable = null;
+        }
+        
+        hideSpinner();
+        showScreen('welcome');
+      }
+      
+      // Dashboard Initialization
+      function initializeDashboard() {
+        showSpinner();
+        
+        // Load products from localStorage
+        products = JSON.parse(localStorage.getItem('products') || '[]');
+        
+        // Initialize DataTable
+        if (!dataTable) {
+          dataTable = $('#stockTable').DataTable({
+            data: products,
+            columns: [
+              { data: 'id' },
+              { data: 'name' },
+              { 
+                data: 'category',
+                render: function(data) {
+                  const categoryClasses = {
+                    'Electrónica': 'bg-info',
+                    'Alimentación': 'bg-success',
+                    'Ropa': 'bg-warning',
+                    'Hogar': 'bg-secondary'
+                  };
+                  const bgClass = categoryClasses[data] || 'bg-primary';
+                  return `<span class="badge ${bgClass} category-badge">${data}</span>`;
+                }
+              },
+              { data: 'quantity' },
+              { 
+                data: 'price',
+                render: function(data) {
+                  return `$${parseFloat(data).toFixed(2)}`;
+                }
+              },
+              { 
+                data: null,
+                render: function(data, type, row) {
+                  let buttons = `
+                    <button class="btn btn-sm btn-primary edit-btn" data-id="${row.id}">
+                      <i class="fas fa-edit"></i> Editar
+                    </button>
+                  `;
+                  
+                  if (currentUser && currentUser.role === 'admin') {
+                    buttons += `
+                      <button class="btn btn-sm btn-danger ms-2 delete-btn" data-id="${row.id}">
+                        <i class="fas fa-trash"></i> Eliminar
+                      </button>
+                    `;
+                  }
+                  
+                  return `<div class="table-actions">${buttons}</div>`;
+                }
+              }
+            ],
+            responsive: true,
+            language: {
+              url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+            }
+          });
+          
+          // Attach event listeners to buttons
+$('#stockTable').on('click', '.edit-btn', function() {
+            const id = $(this).data('id');
+            editProduct(id);
+          });
+          
+          $('#stockTable').on('click', '.delete-btn', function() {
+            const id = $(this).data('id');
+            showDeleteConfirmation(id);
+          });
+        } else {
+          // Update existing DataTable
+          dataTable.clear().rows.add(products).draw();
+        }
+        
+        // Setup search functionality
+        $('#searchInput').on('keyup', function() {
+          dataTable.search(this.value).draw();
+        });
+        
+        // Setup category filter
+        $('#categoryFilter').on('change', function() {
+          const category = $(this).val();
+          dataTable.column(2).search(category).draw();
+        });
+        
+        // Update statistics
+        updateDashboardStats();
+        
+        hideSpinner();
+      }
+      
+      // Add Product Button
+      document.getElementById('addProductBtn').addEventListener('click', function() {
+        // Reset form
+        document.getElementById('productForm').reset();
+        document.getElementById('productId').value = '';
+        document.getElementById('productModalTitle').textContent = 'Agregar Producto';
+        
+        // Show modal
+        productModal.show();
+      });
+      
+      // Save Product (Add/Edit)
+      document.getElementById('saveProductBtn').addEventListener('click', function() {
+        // Validate form
+        const form = document.getElementById('productForm');
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+        
+        showSpinner();
+        
+        const id = document.getElementById('productId').value;
+        const name = document.getElementById('productName').value;
+        const category = document.getElementById('productCategory').value;
+        const quantity = parseInt(document.getElementById('productQuantity').value);
+        const price = parseFloat(document.getElementById('productPrice').value);
+        
+        if (id) {
+          // Edit existing product
+          const index = products.findIndex(p => p.id.toString() === id);
+          if (index !== -1) {
+            products[index] = { ...products[index], name, category, quantity, price };
+          }
+        } else {
+          // Add new product
+          const newId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+          products.push({ id: newId, name, category, quantity, price });
+        }
+        
+        // Save to localStorage
+        localStorage.setItem('products', JSON.stringify(products));
+// Update table
+        dataTable.clear().rows.add(products).draw();
+        
+        // Update statistics
+        updateDashboardStats();
+        
+        // Hide modal
+        productModal.hide();
+        hideSpinner();
+      });
+      
+      // Edit Product
+      function editProduct(id) {
+        const product = products.find(p => p.id === id);
+        if (product) {
+          // Fill form
+          document.getElementById('productId').value = product.id;
+          document.getElementById('productName').value = product.name;
+          document.getElementById('productCategory').value = product.category;
+          document.getElementById('productQuantity').value = product.quantity;
+          document.getElementById('productPrice').value = product.price;
+          
+          // Update modal title
+          document.getElementById('productModalTitle').textContent = 'Editar Producto';
+          
+          // Show modal
+          productModal.show();
+        }
+      }
+      
+      // Show Delete Confirmation
+      function showDeleteConfirmation(id) {
+        const product = products.find(p => p.id === id);
+        if (product) {
+          document.getElementById('deleteProductName').textContent = product.name;
+          document.getElementById('deleteProductId').value = product.id;
+          deleteModal.show();
+        }
+      }
+      
+      // Confirm Delete
+      document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        showSpinner();
+        
+        const id = parseInt(document.getElementById('deleteProductId').value);
+        const index = products.findIndex(p => p.id === id);
+        
+        if (index !== -1) {
+          // Remove product
+          products.splice(index, 1);
+          
+          // Save to localStorage
+          localStorage.setItem('products', JSON.stringify(products));
+          
+          // Update table
+          dataTable.clear().rows.add(products).draw();
+          
+          // Update statistics
+          updateDashboardStats();
+        }
+        
+        // Hide modal
+        deleteModal.hide();
+        hideSpinner();
+      });
+      
+      // Update Dashboard Statistics
+      function updateDashboardStats() {
+        document.getElementById('totalProductsCount').textContent = products.length;
+        
+        // Count unique categories
+        const categories = [...new Set(products.map(p => p.category))];
+        document.getElementById('categoriesCount').textContent = categories.length;
+        
+        // Count products with low stock (less than 10)
+        const lowStock = products.filter(p => p.quantity < 10).length;
+        document.getElementById('lowStockCount').textContent = lowStock;
+      }
+      
+      // Toast helper
+      function showToast(message, variant = 'info') {
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-bg-${variant} border-0`;
+        toastEl.setAttribute('role','alert');
+        toastEl.setAttribute('aria-live','assertive');
+        toastEl.setAttribute('aria-atomic','true');
+        toastEl.innerHTML = `
+          <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                    data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>`;
+        document.getElementById('toastContainer').append(toastEl);
+        new bootstrap.Toast(toastEl, { delay: 5000 }).show();
+      }
+      
+      // Update connection indicator
+      function updateConnectionStatus(connected) {
+        const icon = document.querySelector('#connStatus i');
+        icon.classList.toggle('text-success', connected);
+        icon.classList.toggle('text-danger', !connected);
+        icon.title = connected ? 'Conectado (real-time)' : 'Desconectado, reconectando...';
+      }
+      
+      // WebSocket setup with auto-reconnect
+      function connectWebSocket() {
+        ws = new WebSocket('wss://your-server.example.com/updates');
+ws.addEventListener('open', () => {
+          updateConnectionStatus(true);
+          showToast('Conexión WebSocket establecida', 'success');
+        });
+
+        ws.addEventListener('message', ({ data }) => {
+          // assume incoming: { type: 'update', products: [...], note: '...' }
+          const msg = JSON.parse(data);
+          if (msg.type === 'update') {
+            products = msg.products;
+            if (dataTable) {
+              dataTable.clear().rows.add(products).draw();
+              updateDashboardStats();
+            }
+            showToast(msg.note || 'Datos actualizados', 'info');
+          }
+        });
+
+        ws.addEventListener('close', () => {
+          updateConnectionStatus(false);
+          setTimeout(connectWebSocket, RECONNECT_INTERVAL);
+        });
+        ws.addEventListener('error', () => ws.close());
+      }
+      
+      // Initialize app
+      document.addEventListener('DOMContentLoaded', function() {
+        // Initialize with sample data if nothing exists
+        if (!localStorage.getItem('products')) {
+          const sampleProducts = [
+            { id: 1, name: 'Laptop HP', category: 'Electrónica', quantity: 15, price: 899.99 },
+            { id: 2, name: 'Smartphone Samsung', category: 'Electrónica', quantity: 25, price: 499.99 },
+            { id: 3, name: 'Arroz Premium', category: 'Alimentación', quantity: 50, price: 3.99 },
+            { id: 4, name: 'Camiseta Algodón', category: 'Ropa', quantity: 30, price: 19.99 }
+          ];
+          localStorage.setItem('products', JSON.stringify(sampleProducts));
+        }
+        
+        connectWebSocket();            // NEW: start WS on load
+        initializeApp();
+      });
+    </script>
+  </body>
+</html>
